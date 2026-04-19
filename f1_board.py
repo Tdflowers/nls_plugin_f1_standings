@@ -78,7 +78,7 @@ class F1Board(BoardBase):
         self.top_n = self.get_config_value("top_n", 0)
         self.refresh_minutes = self.get_config_value("refresh_minutes", 60)
 
-        # Font / sizing
+        # Font / sizing – mirrors the Olympics and standings boards
         if self.matrix.width >= 128:
             self.font = data.config.layout.font_large
             self.font_height = 13
@@ -95,10 +95,14 @@ class F1Board(BoardBase):
         self.code_bg_width = 14 * wm  # colored background behind driver/team code
         self.code_bg_end = self.code_x + self.code_bg_width
 
-        f1_worker.fetch()
+        # Cache lives for 2× the refresh interval so a single failed refresh
+        # never clears the display. At 240 min refresh that's an 8-hour TTL.
+        self.cache_ttl = self.refresh_minutes * 60 * 2
+
+        f1_worker.fetch(cache_ttl=self.cache_ttl)
 
         self.add_scheduled_job(
-            f1_worker.fetch,
+            lambda: f1_worker.fetch(cache_ttl=self.cache_ttl),
             "interval",
             job_id="f1_standings_fetch",
             minutes=self.refresh_minutes,
