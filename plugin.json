@@ -1,0 +1,23 @@
+{
+    "name": "f1_standings",
+    "version": "2026.4.0",
+    "description": "F1 Standings",
+    "author": "tyler29294",
+    "boards": [
+        {
+            "id": "f1_standings",
+            "class_name": "F1Board",
+            "module": "f1_board",
+            "description": "Shows F1 driver and constructor standings scrolling vertically"
+        }
+    ],
+    "requirements": {
+        "app_version": ">=2025.12.01",
+        "python_dependencies": [
+            "beautifulsoup4>=4.12",
+            "requests>=2.31"
+        ]
+    },
+    "enabled": true,
+    "preserve_files": ["config.json"]
+}

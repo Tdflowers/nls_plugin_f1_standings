@@ -1,0 +1,8 @@
+{
+    "refresh_minutes": 240,
+    "scroll_speed": 0.08,
+    "rotation_rate": 5,
+    "show_drivers": true,
+    "show_constructors": true,
+    "top_n": 0
+}
