@@ -27,7 +27,7 @@ COLOR_BLACK = (0, 0, 0)
 COLOR_GRAY = (120, 120, 120)
 COLOR_F1_RED = (232, 0, 32)
 
-# 2025 F1 team livery colors: team_id -> (bg_rgb, text_rgb)
+# 2026 F1 team livery colors: team_id -> (bg_rgb, text_rgb)
 TEAM_COLORS = {
     "red_bull":           ((54, 113, 198),   COLOR_WHITE),
     "ferrari":            ((232, 0, 32),     COLOR_WHITE),
@@ -78,7 +78,7 @@ class F1Board(BoardBase):
         self.top_n = self.get_config_value("top_n", 0)
         self.refresh_minutes = self.get_config_value("refresh_minutes", 60)
 
-        # Font / sizing – mirrors the Olympics and standings boards
+        # Font / sizing
         if self.matrix.width >= 128:
             self.font = data.config.layout.font_large
             self.font_height = 13
