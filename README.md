@@ -37,5 +37,16 @@ nano config.json
  - show_constructors - should the board show the constructors standings? (true or false)
  - top_n - how many drivers or constructors should show on the list. use 0 for all. 
 
+ Example Config
+ `{
+    "refresh_minutes": 240,
+    "scroll_speed": 0.08,
+    "rotation_rate": 5,
+    "show_drivers": true,
+    "show_constructors": true,
+    "top_n": 0
+}
+`
+
 ## Note on the API
 Jolpica F1 is managed by humans and thus is updated on mondays. This means you won't see the updated standings directly after the race is completed and will need to wait til the following monday for the standings to update.
