@@ -29,19 +29,19 @@ COLOR_F1_RED = (232, 0, 32)
 
 # 2026 F1 team livery colors: team_id -> (bg_rgb, text_rgb)
 TEAM_COLORS = {
-    "red_bull":           ((54, 113, 198),   COLOR_WHITE),
-    "ferrari":            ((232, 0, 32),     COLOR_WHITE),
+    "red_bull":           ((54, 113, 198),   COLOR_BLACK),
+    "ferrari":            ((232, 0, 32),     COLOR_BLACK),
     "mercedes":           ((39, 244, 210),   COLOR_BLACK),
     "mclaren":            ((255, 128, 0),    COLOR_BLACK),
-    "aston_martin":       ((34, 153, 113),   COLOR_WHITE),
+    "aston_martin":       ((34, 153, 113),   COLOR_BLACK),
     "alpine":             ((255, 135, 188),  COLOR_BLACK),
     "williams":           ((100, 196, 255),  COLOR_BLACK),
     "haas":               ((182, 186, 189),  COLOR_BLACK),
     "kick_sauber":        ((82, 226, 82),    COLOR_BLACK),
     "sauber":             ((82, 226, 82),    COLOR_BLACK),
-    "rb":                 ((102, 146, 255),  COLOR_WHITE),
-    "racing_bulls":       ((102, 146, 255),  COLOR_WHITE),
-    "visa_cash_app_rb":   ((102, 146, 255),  COLOR_WHITE),
+    "rb":                 ((102, 146, 255),  COLOR_BLACK),
+    "racing_bulls":       ((102, 146, 255),  COLOR_BLACK),
+    "visa_cash_app_rb":   ((102, 146, 255),  COLOR_BLACK),
 }
 DEFAULT_TEAM_COLOR = ((80, 80, 80), COLOR_WHITE)
 
@@ -229,7 +229,7 @@ class F1Board(BoardBase):
             pos_w = int(self.font.getlength(pos))
             draw.text(
                 (self.pos_width - pos_w, row_pos),
-                pos, font=self.font, fill=COLOR_GRAY,
+                pos, font=self.font, fill=COLOR_WHITE,
             )
 
             # Driver code on team-colored background (stretched to fill available space)
