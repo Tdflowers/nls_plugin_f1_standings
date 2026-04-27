@@ -1,18 +1,22 @@
 """
 F1 Next Race Board - Displays the upcoming race schedule and session times.
 
-Layout (64x32, 7px font):
-  Row 0  [F1][Next Race]            <- sticky header
-  Row 1   [padding]
-  Row 2   Race name (word-wrapped)
-  Row 3   Race date          time   (yellow, two fixed columns)
-  Row 4   [blank]
-  Row 5   [Location:]               (white on red bg, text-width only)
-  Row 6   Circuit:  <name>          (label gray, value white, word-wrapped)
-  Row 7   Location: <city, country> (label gray, value white, word-wrapped)
-  Row 8   [blank]
-  Row 9   [Weekend:]                (white on red bg, text-width only)
-  Row 10  FP1          05/04 13:30  (date and time in independent right columns)
+Positions and sizing are driven by layout_64x32.json / layout_128x64.json.
+If no layout file is found the board falls back to sensible pixel defaults.
+
+Scrollable content structure:
+  [padding row — sits behind sticky header at scroll offset 0]
+  Race name (word-wrapped)
+  Race date/time (yellow, full format, word-wrapped)
+  [blank]
+  [Location:]  <- red section header, text-width bg
+  Circuit:     <- gray sub-label
+  <name>       <- white, word-wrapped
+  Location:    <- gray sub-label
+  <city, ctry> <- white, word-wrapped
+  [blank]
+  [Weekend:]   <- red section header, text-width bg
+  FP1   05/01  09:30    <- label left, date+time in fixed right columns
   ...
 """
 import logging
@@ -38,13 +42,6 @@ def _mk_line(
     time=None, tc=COLOR_WHITE,
     bg=None, bg_text_only=False,
 ):
-    """
-    left         — drawn at x=2, left-aligned
-    date         — right-aligned to the date column
-    time         — right-aligned to the right edge
-    bg           — row background fill color
-    bg_text_only — bg rectangle covers only the left text width when True
-    """
     return {
         "left": left, "lc": lc,
         "date": date, "dc": dc,
@@ -59,6 +56,7 @@ class F1NextBoard(BoardBase):
 
     Shows the upcoming race name, location, and all weekend session times.
     Scrolls vertically through the full schedule.
+    Positions are driven by the plugin layout files.
     """
 
     def __init__(self, data, matrix, sleepEvent):
@@ -74,14 +72,17 @@ class F1NextBoard(BoardBase):
         self.use_local_time  = self.get_config_value("use_local_time",  True)
         self.time_24h        = self.get_config_value("time_24h",        True)
 
+        # Load layout file; _init_layout_metrics() derives pixel constants from it.
+        self.layout = self.get_board_layout("f1_next")
+
         if self.matrix.width >= 128:
-            self.font             = data.config.layout.font_large
-            self.font_height      = 13
-            self.width_multiplier = 2
+            self.font        = data.config.layout.font_large
+            self.font_height = 13
         else:
-            self.font             = data.config.layout.font
-            self.font_height      = 7
-            self.width_multiplier = 1
+            self.font        = data.config.layout.font
+            self.font_height = 7
+
+        self._init_layout_metrics()
 
         self.cache_ttl = self.refresh_minutes * 60 * 2
 
@@ -94,6 +95,32 @@ class F1NextBoard(BoardBase):
             minutes=self.refresh_minutes,
         )
 
+    def _init_layout_metrics(self):
+        """
+        Pull badge width, title x, content left margin, and line height from
+        the layout file.  Every drawing method uses these values so swapping
+        layout files is all that's needed to support a new display size.
+        """
+        fh = self.font_height
+        lo = self.layout or {}
+
+        badge       = lo.get("header_badge", {})
+        badge_size  = badge.get("size", [None, None])
+        self.badge_w = (
+            badge_size[0]
+            if badge_size[0] is not None
+            else int(self.font.getlength("F1")) + 4
+        )
+
+        title        = lo.get("header_title", {})
+        title_pos    = title.get("position", [None, 0])
+        self.title_x = title_pos[0] if title_pos[0] is not None else self.badge_w + 2
+
+        content          = lo.get("content", {})
+        content_pos      = content.get("position", [2, fh + 1])
+        self.content_x   = content_pos[0]
+        self.line_height = content.get("line_height", fh)
+
     # ------------------------------------------------------------------
     # Render entry point
     # ------------------------------------------------------------------
@@ -105,7 +132,7 @@ class F1NextBoard(BoardBase):
             return
 
         lines      = self._build_lines(race)
-        img_height = len(lines) * self.font_height
+        img_height = len(lines) * self.line_height
         image      = self._draw_content(lines, img_height)
         self._scroll_image(image, img_height)
 
@@ -145,22 +172,21 @@ class F1NextBoard(BoardBase):
     # ------------------------------------------------------------------
 
     def _section_header(self, text):
-        """Red background section header, bg covers text width only."""
         return _mk_line(left=text, lc=COLOR_WHITE, bg=COLOR_F1_RED, bg_text_only=True)
 
     def _build_lines(self, race):
-        """Return list of line dicts for all scrollable rows."""
         lines = []
+        avail = self.matrix.width - self.content_x
 
-        # Empty row hidden behind sticky header at scroll offset 0.
+        # Empty padding row — hidden behind sticky header at scroll offset 0.
         lines.append(_mk_line())
 
-        # Race name — word-wrapped, left-aligned
-        for wrapped in self._word_wrap(race["name"], self.matrix.width - 2):
-            lines.append(_mk_line(left=wrapped, lc=COLOR_WHITE))
+        # Race name
+        for seg in self._word_wrap(race["name"], avail):
+            lines.append(_mk_line(left=seg, lc=COLOR_WHITE))
 
-        # Race date + time — full format, word-wrapped, yellow
-        for seg in self._word_wrap(self._fmt_summary_dt(race["dt"]), self.matrix.width - 2):
+        # Race date/time — full format, word-wrapped, yellow
+        for seg in self._word_wrap(self._fmt_summary_dt(race["dt"]), avail):
             lines.append(_mk_line(left=seg, lc=COLOR_YELLOW))
 
         # Location section
@@ -174,22 +200,19 @@ class F1NextBoard(BoardBase):
 
             if circuit:
                 lines.append(_mk_line(left="Circuit:", lc=COLOR_GRAY))
-                for seg in self._word_wrap(circuit, self.matrix.width - 2):
+                for seg in self._word_wrap(circuit, avail):
                     lines.append(_mk_line(left=seg, lc=COLOR_WHITE))
 
             loc_str = ", ".join(filter(None, [locality, country]))
             if loc_str:
                 lines.append(_mk_line(left="Location:", lc=COLOR_GRAY))
-                for seg in self._word_wrap(loc_str, self.matrix.width - 2):
+                for seg in self._word_wrap(loc_str, avail):
                     lines.append(_mk_line(left=seg, lc=COLOR_WHITE))
 
-        # Blank separator before weekend
+        # Weekend section
         lines.append(_mk_line())
-
-        # Weekend section header
         lines.append(self._section_header("Weekend:"))
 
-        # Sessions: label on left (gray), date + time in two right columns
         for session in race["sessions"]:
             lines.append(_mk_line(
                 left=session["label"], lc=COLOR_GRAY,
@@ -200,7 +223,6 @@ class F1NextBoard(BoardBase):
         return lines
 
     def _word_wrap(self, text, max_width):
-        """Split text into lines that fit within max_width pixels."""
         words   = text.split()
         result  = []
         current = ""
@@ -222,12 +244,12 @@ class F1NextBoard(BoardBase):
 
     def _draw_content(self, lines, img_height):
         width = self.matrix.width
-        fh    = self.font_height
+        lh    = self.line_height
         image = Image.new("RGB", (width, img_height))
         draw  = ImageDraw.Draw(image)
 
-        # Pre-compute fixed right-edge columns for date and time so every
-        # value shares the same anchor regardless of digit widths.
+        # Pre-compute fixed right-edge columns for date/time so every value
+        # shares the same anchor regardless of variable digit widths.
         time_right = width - 2
         max_time_w = max(
             (int(self.font.getlength(ln["time"])) for ln in lines if ln.get("time")),
@@ -241,12 +263,12 @@ class F1NextBoard(BoardBase):
             if bg:
                 if line["bg_text_only"] and line["left"]:
                     bg_w = int(self.font.getlength(line["left"])) + 5
-                    draw.rectangle([0, y, bg_w, y + fh - 1], fill=bg)
+                    draw.rectangle([0, y, bg_w, y + lh - 1], fill=bg)
                 else:
-                    draw.rectangle([0, y, width - 1, y + fh - 1], fill=bg)
+                    draw.rectangle([0, y, width - 1, y + lh - 1], fill=bg)
 
             if line["left"]:
-                draw.text((2, y), line["left"], font=self.font, fill=line["lc"])
+                draw.text((self.content_x, y), line["left"], font=self.font, fill=line["lc"])
 
             if line["date"]:
                 dw = int(self.font.getlength(line["date"]))
@@ -256,7 +278,7 @@ class F1NextBoard(BoardBase):
                 tw = int(self.font.getlength(line["time"]))
                 draw.text((time_right - tw, y), line["time"], font=self.font, fill=line["tc"])
 
-            y += fh
+            y += lh
 
         return image
 
@@ -282,19 +304,18 @@ class F1NextBoard(BoardBase):
         self.matrix.render()
 
     def _draw_sticky_header(self):
-        fh = self.font_height
-        self.matrix.draw_rectangle((0, 0), (self.matrix.width, fh - 1), fill=COLOR_BLACK)
-        header = Image.new("RGB", (self.matrix.width, fh))
-        draw   = ImageDraw.Draw(header)
-        self._draw_f1_header(draw, 0, "Next Race")
-        self.matrix.draw_image((0, 0), header)
+        """Draw the F1 badge + 'Next Race' title using layout-derived positions."""
+        lh = self.line_height
+        self.matrix.draw_rectangle((0, 0), (self.matrix.width, lh - 1), fill=COLOR_BLACK)
 
-    def _draw_f1_header(self, draw, row_y, title):
-        """Red 'F1' badge on the left, title text to the right."""
-        f1_w = int(self.font.getlength("F1")) + 2 * self.width_multiplier
-        draw.rectangle(
-            [0, row_y, f1_w, row_y + self.font_height - 1],
-            fill=COLOR_F1_RED,
-        )
-        draw.text((1, row_y), "F1", font=self.font, fill=COLOR_WHITE)
-        draw.text((f1_w + 2, row_y), title, font=self.font, fill=COLOR_WHITE)
+        header = Image.new("RGB", (self.matrix.width, lh))
+        draw   = ImageDraw.Draw(header)
+
+        # F1 badge — width and height from layout header_badge.size
+        draw.rectangle([0, 0, self.badge_w, lh - 1], fill=COLOR_F1_RED)
+        draw.text((1, 0), "F1", font=self.font, fill=COLOR_WHITE)
+
+        # Title — x position from layout header_title.position
+        draw.text((self.title_x, 0), "Next Race", font=self.font, fill=COLOR_WHITE)
+
+        self.matrix.draw_image((0, 0), header)
