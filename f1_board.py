@@ -38,12 +38,12 @@ TEAM_COLORS = {
     "williams":           ((100, 196, 255),  COLOR_BLACK),
     "haas":               ((182, 186, 189),  COLOR_BLACK),
     "kick_sauber":        ((82, 226, 82),    COLOR_BLACK),
-    "sauber":             ((82, 226, 82),    COLOR_BLACK),
     "rb":                 ((102, 146, 255),  COLOR_BLACK),
-    "racing_bulls":       ((102, 146, 255),  COLOR_BLACK),
-    "visa_cash_app_rb":   ((102, 146, 255),  COLOR_BLACK),
+    "audi":               ((199, 42, 36),    COLOR_BLACK),
+    "cadillac":           ((200, 215, 228),  COLOR_BLACK),
+
 }
-DEFAULT_TEAM_COLOR = ((80, 80, 80), COLOR_WHITE)
+DEFAULT_TEAM_COLOR = ((80, 80, 80), COLOR_BLACK)
 
 
 def _team_colors(team_id):
