@@ -202,7 +202,7 @@ class F1NextBoard(BoardBase):
 
             loc_str = ", ".join(filter(None, [locality, country]))
             if loc_str:
-                lines.append(_mk_line(left="Location:", lc=COLOR_GRAY))
+                lines.append(_mk_line(left="Host:", lc=COLOR_GRAY))
                 for seg in self._word_wrap(loc_str, avail):
                     lines.append(_mk_line(left=seg, lc=COLOR_WHITE))
 

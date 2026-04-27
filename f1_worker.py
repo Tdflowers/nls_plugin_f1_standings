@@ -217,7 +217,7 @@ def fetch_next_race(season=None, cache_ttl=7200):
             dt = _parse_dt(s.get("date"), s.get("time", "00:00:00Z"))
             if dt:
                 sessions.append({"label": label, "dt": dt})
-    sessions.append({"label": "Race", "dt": race_dt})
+    sessions.append({"label": "Rce", "dt": race_dt})
 
     circuit_data = next_race_data.get("Circuit", {})
     location     = circuit_data.get("Location", {})
