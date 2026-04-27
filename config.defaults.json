@@ -5,7 +5,6 @@
     "show_drivers": true,
     "show_constructors": true,
     "top_n": 0,
-    "show_next_race": true,
     "use_local_time": true,
     "time_24h": true
 }
