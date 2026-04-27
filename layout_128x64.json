@@ -1,4 +1,8 @@
 {
+    "_default": {
+        "position": [0, 0],
+        "align": "left-top"
+    },
     "f1_next": {
         "header_badge": {
             "position": [0, 0],
