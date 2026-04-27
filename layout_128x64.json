@@ -42,7 +42,5 @@
             "align": "left-top",
             "size": [28, 13]
         },
-        "pts_margin": 4,
-        "pts_gap": 4
     }
 }

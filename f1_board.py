@@ -131,9 +131,10 @@ class F1Board(BoardBase):
         self.code_bg_width = code_sz[0]  if code_sz  is not None else 14
         self.code_bg_end   = self.code_x + self.code_bg_width
 
-        # Points column margins
-        self.pts_margin = getattr(lo, "pts_margin", 2)
-        self.pts_gap    = getattr(lo, "pts_gap",    2)
+        # Points column margins — scale with display size (2px at 64w, 4px at 128w)
+        scale = fh // 7
+        self.pts_margin = 2 * scale
+        self.pts_gap    = 2 * scale
 
     # ------------------------------------------------------------------
     # Render entry point
