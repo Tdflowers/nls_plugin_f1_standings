@@ -53,7 +53,7 @@ def _fmt_points(pts):
     return str(int(pts)) if pts == int(pts) else f"{pts:.1f}"
 
 
-class F1Board(BoardBase):
+class F1Standings(BoardBase):
     """
     F1 Driver and Constructor Standings Board.
 

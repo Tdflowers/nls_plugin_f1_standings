@@ -1,13 +1,13 @@
 {
-    "name": "f1_standings",
-    "version": "2026.4.0",
-    "description": "F1 Standings",
+    "name": "f1_board",
+    "version": "2026.4.1",
+    "description": "F1 Boards to show standings and upcoming race details",
     "author": "tyler29294",
     "boards": [
         {
             "id": "f1_standings",
-            "class_name": "F1Board",
-            "module": "f1_board",
+            "class_name": "F1Standings",
+            "module": "f1_standings",
             "description": "Shows F1 driver and constructor standings scrolling vertically"
         },
         {
