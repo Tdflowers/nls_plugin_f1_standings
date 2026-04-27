@@ -7,9 +7,8 @@ Layout (64x32, 7px font):
   Row 2   2  [NOR]                401
   ...                       (scrolls)
 
-The driver/team code is rendered on a colored background matching the
-team's livery color. Points are right-aligned. The board cycles through
-driver standings then constructor standings (each independently scrollable).
+All column geometry is driven by layout_64x32.json / layout_128x64.json.
+If no layout file is found the board falls back to sensible pixel defaults.
 """
 import logging
 from datetime import datetime
@@ -22,26 +21,25 @@ from . import f1_worker
 
 debug = logging.getLogger("scoreboard")
 
-COLOR_WHITE = (255, 255, 255)
-COLOR_BLACK = (0, 0, 0)
-COLOR_GRAY = (120, 120, 120)
+COLOR_WHITE  = (255, 255, 255)
+COLOR_BLACK  = (0, 0, 0)
+COLOR_GRAY   = (120, 120, 120)
 COLOR_F1_RED = (232, 0, 32)
 
 # 2026 F1 team livery colors: team_id -> (bg_rgb, text_rgb)
 TEAM_COLORS = {
-    "red_bull":           ((54, 113, 198),   COLOR_BLACK),
-    "ferrari":            ((232, 0, 32),     COLOR_BLACK),
-    "mercedes":           ((39, 244, 210),   COLOR_BLACK),
-    "mclaren":            ((255, 128, 0),    COLOR_BLACK),
-    "aston_martin":       ((34, 153, 113),   COLOR_BLACK),
-    "alpine":             ((255, 135, 188),  COLOR_BLACK),
-    "williams":           ((100, 196, 255),  COLOR_BLACK),
-    "haas":               ((182, 186, 189),  COLOR_BLACK),
-    "kick_sauber":        ((82, 226, 82),    COLOR_BLACK),
-    "rb":                 ((102, 146, 255),  COLOR_BLACK),
-    "audi":               ((199, 42, 36),    COLOR_BLACK),
-    "cadillac":           ((200, 215, 228),  COLOR_BLACK),
-
+    "red_bull":     ((54, 113, 198),  COLOR_BLACK),
+    "ferrari":      ((232, 0, 32),    COLOR_BLACK),
+    "mercedes":     ((39, 244, 210),  COLOR_BLACK),
+    "mclaren":      ((255, 128, 0),   COLOR_BLACK),
+    "aston_martin": ((34, 153, 113),  COLOR_BLACK),
+    "alpine":       ((255, 135, 188), COLOR_BLACK),
+    "williams":     ((100, 196, 255), COLOR_BLACK),
+    "haas":         ((182, 186, 189), COLOR_BLACK),
+    "kick_sauber":  ((82, 226, 82),   COLOR_BLACK),
+    "rb":           ((102, 146, 255), COLOR_BLACK),
+    "audi":         ((199, 42, 36),   COLOR_BLACK),
+    "cadillac":     ((200, 215, 228), COLOR_BLACK),
 }
 DEFAULT_TEAM_COLOR = ((80, 80, 80), COLOR_BLACK)
 
@@ -52,7 +50,6 @@ def _team_colors(team_id):
 
 
 def _fmt_points(pts):
-    """Return points as a string: integer if whole, one decimal otherwise."""
     return str(int(pts)) if pts == int(pts) else f"{pts:.1f}"
 
 
@@ -60,43 +57,37 @@ class F1Board(BoardBase):
     """
     F1 Driver and Constructor Standings Board.
 
-    Scrolls driver standings, then constructor standings, one season at a time.
+    Scrolls driver standings then constructor standings.
     Each section has a sticky header row that stays fixed while content scrolls.
+    Column geometry is read from the plugin layout file.
     """
 
     def __init__(self, data, matrix, sleepEvent):
         super().__init__(data, matrix, sleepEvent)
 
-        self.board_name = "F1 Standings"
-        self.board_version = __version__
+        self.board_name        = "F1 Standings"
+        self.board_version     = __version__
         self.board_description = "F1 driver and constructor standings"
 
-        self.scroll_speed = self.get_config_value("scroll_speed", 0.12)
-        self.rotation_rate = self.get_config_value("rotation_rate", 5)
-        self.show_drivers = self.get_config_value("show_drivers", True)
+        self.scroll_speed      = self.get_config_value("scroll_speed",      0.12)
+        self.rotation_rate     = self.get_config_value("rotation_rate",     5)
+        self.show_drivers      = self.get_config_value("show_drivers",      True)
         self.show_constructors = self.get_config_value("show_constructors", True)
-        self.top_n = self.get_config_value("top_n", 0)
-        self.refresh_minutes = self.get_config_value("refresh_minutes", 60)
+        self.top_n             = self.get_config_value("top_n",             0)
+        self.refresh_minutes   = self.get_config_value("refresh_minutes",   60)
 
-        # Font / sizing – mirrors the Olympics and standings boards
+        # Load layout; _init_layout_metrics() derives all pixel constants from it.
+        self.layout = self.get_board_layout("f1_standings")
+
         if self.matrix.width >= 128:
-            self.font = data.config.layout.font_large
+            self.font        = data.config.layout.font_large
             self.font_height = 13
-            self.width_multiplier = 2
         else:
-            self.font = data.config.layout.font
+            self.font        = data.config.layout.font
             self.font_height = 7
-            self.width_multiplier = 1
 
-        wm = self.width_multiplier
-        # Column geometry (64 px baseline)
-        self.pos_width = 8 * wm       # space reserved for rank number
-        self.code_x = self.pos_width + 1 * wm
-        self.code_bg_width = 14 * wm  # colored background behind driver/team code
-        self.code_bg_end = self.code_x + self.code_bg_width
+        self._init_layout_metrics()
 
-        # Cache lives for 2× the refresh interval so a single failed refresh
-        # never clears the display. At 240 min refresh that's an 8-hour TTL.
         self.cache_ttl = self.refresh_minutes * 60 * 2
 
         f1_worker.fetch(cache_ttl=self.cache_ttl)
@@ -108,8 +99,45 @@ class F1Board(BoardBase):
             minutes=self.refresh_minutes,
         )
 
+    def _init_layout_metrics(self):
+        """
+        Derive all column-geometry constants from the layout file.
+        Falls back to the original 64-px baseline values when no layout is present.
+        JSONData uses attribute access, so all reads go through getattr().
+        """
+        fh = self.font_height
+        lo = self.layout
+
+        # F1 header badge
+        badge    = getattr(lo, "header_badge", None)
+        badge_sz = getattr(badge, "size", None)
+        self.badge_w = badge_sz[0] if badge_sz is not None else int(self.font.getlength("F1")) + 4
+
+        # Title x position
+        title     = getattr(lo, "header_title", None)
+        title_pos = getattr(title, "position", None)
+        self.title_x = title_pos[0] if title_pos is not None else self.badge_w + 2
+
+        # Rank column — right-aligned within this width
+        rank_col = getattr(lo, "rank_col", None)
+        rank_sz  = getattr(rank_col, "size", None)
+        self.pos_width = rank_sz[0] if rank_sz is not None else 8
+
+        # Coloured code/team badge background
+        code_bg  = getattr(lo, "code_bg", None)
+        code_pos = getattr(code_bg, "position", None)
+        code_sz  = getattr(code_bg, "size", None)
+        self.code_x        = code_pos[0] if code_pos is not None else self.pos_width + 1
+        self.code_bg_width = code_sz[0]  if code_sz  is not None else 14
+        self.code_bg_end   = self.code_x + self.code_bg_width
+
+        # Points column margins — scale with display size (2px at 64w, 4px at 128w)
+        scale = fh // 7
+        self.pts_margin = 2 * scale
+        self.pts_gap    = 2 * scale
+
     # ------------------------------------------------------------------
-    # Main render entry point
+    # Render entry point
     # ------------------------------------------------------------------
 
     def render(self):
@@ -139,14 +167,12 @@ class F1Board(BoardBase):
         if self.top_n > 0:
             data = data[: self.top_n]
 
-        season = datetime.now().year
-        title = f"{label} {season}"
+        title     = f"{label} {datetime.now().year}"
         im_height = (len(data) + 1) * self.font_height
-        image = draw_table(data, im_height, self.matrix.width)
+        image     = draw_table(data, im_height, self.matrix.width)
         self._scroll_image(image, im_height, title)
 
     def _scroll_image(self, image, im_height, title):
-        """Draw image with sticky header, pause, then scroll to bottom."""
         i = 0
         self._draw_frame(i, image, title)
         self.sleepEvent.wait(5)
@@ -171,133 +197,102 @@ class F1Board(BoardBase):
         fh = self.font_height
         self.matrix.draw_rectangle((0, 0), (self.matrix.width, fh - 1), fill=COLOR_BLACK)
         header = Image.new("RGB", (self.matrix.width, fh))
-        draw = ImageDraw.Draw(header)
+        draw   = ImageDraw.Draw(header)
         self._draw_f1_header(draw, 0, title)
         self.matrix.draw_image((0, 0), header)
 
     def _draw_f1_header(self, draw, row_y, title):
         """Red 'F1' badge on the left, title text to the right."""
-        f1_w = int(self.font.getlength("F1")) + 2 * self.width_multiplier
         draw.rectangle(
-            [0, row_y, f1_w, row_y + self.font_height - 1],
+            [0, row_y, self.badge_w, row_y + self.font_height - 1],
             fill=COLOR_F1_RED,
         )
         draw.text((1, row_y), "F1", font=self.font, fill=COLOR_WHITE)
-        draw.text((f1_w + 2, row_y), title, font=self.font, fill=COLOR_WHITE)
+        draw.text((self.title_x, row_y), title, font=self.font, fill=COLOR_WHITE)
 
     # ------------------------------------------------------------------
     # Table drawing helpers
     # ------------------------------------------------------------------
 
     def _pts_column(self, entries, width):
-        """Return (pts_col_x, pts_right_margin) giving a fixed points column.
-
-        pts_col_x   — left edge where the widest points string would start
-        pts_right_margin — gap kept between matrix right edge and text
-        All rows draw their points right-aligned to (width - pts_right_margin),
-        so every number's right edge lands at the same pixel.
-        """
-        pts_right_margin = 2 * self.width_multiplier
+        """Return (pts_col_x, pts_right_margin) for a fixed right-aligned points column."""
         max_pts_w = max(
             int(self.font.getlength(_fmt_points(e["points"]))) for e in entries
         )
-        pts_col_x = width - max_pts_w - pts_right_margin
-        return pts_col_x, pts_right_margin
+        pts_col_x = width - max_pts_w - self.pts_margin
+        return pts_col_x, self.pts_margin
 
     def _draw_driver_table(self, drivers, img_height, width):
-        image = Image.new("RGB", (width, img_height))
-        draw = ImageDraw.Draw(image)
-        fh = self.font_height
-        wm = self.width_multiplier
+        image   = Image.new("RGB", (width, img_height))
+        draw    = ImageDraw.Draw(image)
+        fh      = self.font_height
         row_pos = 0
 
         pts_col_x, pts_margin = self._pts_column(drivers, width)
-        # Background stretches from code_x to just before the points column
-        bg_gap = 2 * wm  # padding between bg right edge and points left edge
-        bg_right = pts_col_x - bg_gap
+        bg_right = pts_col_x - self.pts_gap
 
         self._draw_f1_header(draw, row_pos, f"Drivers {datetime.now().year}")
         row_pos += fh
 
         for entry in drivers:
-            pos = str(entry["position"])
+            pos  = str(entry["position"])
             code = entry["code"]
-            pts = _fmt_points(entry["points"])
+            pts  = _fmt_points(entry["points"])
             bg, fg = _team_colors(entry.get("team_id", ""))
 
-            # Rank (right-aligned in pos_width)
+            # Rank — right-aligned within pos_width
             pos_w = int(self.font.getlength(pos))
-            draw.text(
-                (self.pos_width - pos_w, row_pos),
-                pos, font=self.font, fill=COLOR_GRAY,
-            )
+            draw.text((self.pos_width - pos_w, row_pos), pos, font=self.font, fill=COLOR_GRAY)
 
-            # Driver code on team-colored background (stretched to fill available space)
-            draw.rectangle(
-                [self.code_x, row_pos, bg_right, row_pos + fh - 1],
-                fill=bg,
-            )
+            # Driver code on team-coloured background
+            draw.rectangle([self.code_x, row_pos, bg_right, row_pos + fh - 1], fill=bg)
             code_w = int(self.font.getlength(code))
             draw.text(
                 (self.code_x + (bg_right - self.code_x - code_w) // 2, row_pos),
                 code, font=self.font, fill=fg,
             )
 
-            # Points — right edge fixed at (width - pts_margin)
+            # Points — right edge pinned at width - pts_margin
             pts_w = int(self.font.getlength(pts))
-            draw.text(
-                (width - pts_w - pts_margin, row_pos),
-                pts, font=self.font, fill=COLOR_WHITE,
-            )
+            draw.text((width - pts_w - pts_margin, row_pos), pts, font=self.font, fill=COLOR_WHITE)
 
             row_pos += fh
 
         return image
 
     def _draw_constructor_table(self, constructors, img_height, width):
-        image = Image.new("RGB", (width, img_height))
-        draw = ImageDraw.Draw(image)
-        fh = self.font_height
-        wm = self.width_multiplier
+        image   = Image.new("RGB", (width, img_height))
+        draw    = ImageDraw.Draw(image)
+        fh      = self.font_height
         row_pos = 0
 
         pts_col_x, pts_margin = self._pts_column(constructors, width)
-        bg_gap = 2 * wm
-        bg_right = pts_col_x - bg_gap
+        bg_right = pts_col_x - self.pts_gap
 
         self._draw_f1_header(draw, row_pos, f"Teams {datetime.now().year}")
         row_pos += fh
 
         for entry in constructors:
-            pos = str(entry["position"])
+            pos   = str(entry["position"])
             short = entry.get("short", entry.get("name", "???")[:3].upper())
-            pts = _fmt_points(entry["points"])
+            pts   = _fmt_points(entry["points"])
             bg, fg = _team_colors(entry.get("team_id", ""))
 
             # Rank
             pos_w = int(self.font.getlength(pos))
-            draw.text(
-                (self.pos_width - pos_w, row_pos),
-                pos, font=self.font, fill=COLOR_GRAY,
-            )
+            draw.text((self.pos_width - pos_w, row_pos), pos, font=self.font, fill=COLOR_GRAY)
 
-            # Team code on team-colored background (stretched to fill available space)
-            draw.rectangle(
-                [self.code_x, row_pos, bg_right, row_pos + fh - 1],
-                fill=bg,
-            )
+            # Team code on team-coloured background
+            draw.rectangle([self.code_x, row_pos, bg_right, row_pos + fh - 1], fill=bg)
             short_w = int(self.font.getlength(short))
             draw.text(
                 (self.code_x + (bg_right - self.code_x - short_w) // 2, row_pos),
                 short, font=self.font, fill=fg,
             )
 
-            # Points — right edge fixed at (width - pts_margin)
+            # Points — right edge pinned at width - pts_margin
             pts_w = int(self.font.getlength(pts))
-            draw.text(
-                (width - pts_w - pts_margin, row_pos),
-                pts, font=self.font, fill=COLOR_WHITE,
-            )
+            draw.text((width - pts_w - pts_margin, row_pos), pts, font=self.font, fill=COLOR_WHITE)
 
             row_pos += fh
 

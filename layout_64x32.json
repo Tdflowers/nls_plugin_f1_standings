@@ -1,0 +1,46 @@
+{
+    "_default": {
+        "position": [0, 0],
+        "align": "left-top"
+    },
+    "f1_next": {
+        "header_badge": {
+            "position": [0, 0],
+            "align": "left-top",
+            "size": [12, 7]
+        },
+        "header_title": {
+            "position": [14, 0],
+            "align": "left-top",
+            "font": "default"
+        },
+        "content": {
+            "position": [2, 8],
+            "align": "left-top",
+            "font": "default",
+            "line_height": 7
+        }
+    },
+    "f1_standings": {
+        "header_badge": {
+            "position": [0, 0],
+            "align": "left-top",
+            "size": [12, 7]
+        },
+        "header_title": {
+            "position": [14, 0],
+            "align": "left-top",
+            "font": "default"
+        },
+        "rank_col": {
+            "position": [0, 0],
+            "align": "right-top",
+            "size": [8, 7]
+        },
+        "code_bg": {
+            "position": [9, 0],
+            "align": "left-top",
+            "size": [14, 7]
+        }
+    }
+}
