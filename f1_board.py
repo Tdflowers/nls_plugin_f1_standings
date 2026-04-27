@@ -229,7 +229,7 @@ class F1Board(BoardBase):
             pos_w = int(self.font.getlength(pos))
             draw.text(
                 (self.pos_width - pos_w, row_pos),
-                pos, font=self.font, fill=COLOR_WHITE,
+                pos, font=self.font, fill=COLOR_GRAY,
             )
 
             # Driver code on team-colored background (stretched to fill available space)
