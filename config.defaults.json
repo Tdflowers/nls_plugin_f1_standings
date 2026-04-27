@@ -4,5 +4,8 @@
     "rotation_rate": 5,
     "show_drivers": true,
     "show_constructors": true,
-    "top_n": 0
+    "top_n": 0,
+    "show_next_race": true,
+    "use_local_time": true,
+    "time_24h": true
 }

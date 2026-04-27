@@ -9,6 +9,12 @@
             "class_name": "F1Board",
             "module": "f1_board",
             "description": "Shows F1 driver and constructor standings scrolling vertically"
+        },
+        {
+            "id": "f1_next",
+            "class_name": "F1NextBoard",
+            "module": "f1_next_board",
+            "description": "Shows the next upcoming F1 race schedule and all session times"
         }
     ],
     "requirements": {
