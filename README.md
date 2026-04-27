@@ -3,9 +3,9 @@ A **F1 Standings and Next Race** plugin board for the [NHL LED Scoreboard](https
 
 Data comes from the [Jolpica F1 API](https://github.com/jolpica/jolpica-f1)
 
-###F1 Driver Standings
+### F1 Driver Standings
 ![F1 Standings Board 64x32](assets/screenshots/f1_standings_screenshot.png)
-###F1 Next Race
+### F1 Next Race
 ![F1 Next Board 64x32](assets/screenshots/f1_next_screenshot.png)
 
 ## Features
