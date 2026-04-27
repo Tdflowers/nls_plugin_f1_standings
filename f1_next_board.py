@@ -178,9 +178,9 @@ class F1NextBoard(BoardBase):
         # Empty padding row — hidden behind sticky header at scroll offset 0.
         lines.append(_mk_line())
 
-        # Race name
+        # Race name — white background, black text
         for seg in self._word_wrap(race["name"], avail):
-            lines.append(_mk_line(left=seg, lc=COLOR_WHITE))
+            lines.append(_mk_line(left=seg, lc=COLOR_BLACK, bg=COLOR_WHITE))
 
         # Race date/time — full format, word-wrapped, yellow
         for seg in self._word_wrap(self._fmt_summary_dt(race["dt"]), avail):
