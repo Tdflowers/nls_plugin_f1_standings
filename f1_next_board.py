@@ -100,26 +100,23 @@ class F1NextBoard(BoardBase):
         Pull badge width, title x, content left margin, and line height from
         the layout file.  Every drawing method uses these values so swapping
         layout files is all that's needed to support a new display size.
+        JSONData uses attribute access, so all reads go through getattr().
         """
         fh = self.font_height
-        lo = self.layout or {}
+        lo = self.layout
 
-        badge       = lo.get("header_badge", {})
-        badge_size  = badge.get("size", [None, None])
-        self.badge_w = (
-            badge_size[0]
-            if badge_size[0] is not None
-            else int(self.font.getlength("F1")) + 4
-        )
+        badge    = getattr(lo, "header_badge", None)
+        badge_sz = getattr(badge, "size", None)
+        self.badge_w = badge_sz[0] if badge_sz is not None else int(self.font.getlength("F1")) + 4
 
-        title        = lo.get("header_title", {})
-        title_pos    = title.get("position", [None, 0])
-        self.title_x = title_pos[0] if title_pos[0] is not None else self.badge_w + 2
+        title     = getattr(lo, "header_title", None)
+        title_pos = getattr(title, "position", None)
+        self.title_x = title_pos[0] if title_pos is not None else self.badge_w + 2
 
-        content          = lo.get("content", {})
-        content_pos      = content.get("position", [2, fh + 1])
-        self.content_x   = content_pos[0]
-        self.line_height = content.get("line_height", fh)
+        content     = getattr(lo, "content", None)
+        content_pos = getattr(content, "position", None)
+        self.content_x   = content_pos[0] if content_pos is not None else 2
+        self.line_height = getattr(content, "line_height", fh)
 
     # ------------------------------------------------------------------
     # Render entry point
@@ -187,7 +184,7 @@ class F1NextBoard(BoardBase):
 
         # Race date/time — full format, word-wrapped, yellow
         for seg in self._word_wrap(self._fmt_summary_dt(race["dt"]), avail):
-            lines.append(_mk_line(left=seg, lc=COLOR_YELLOW))
+            lines.append(_mk_line(left=seg, lc=COLOR_WHITE))
 
         # Location section
         circuit  = race.get("circuit", "")

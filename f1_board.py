@@ -103,40 +103,37 @@ class F1Board(BoardBase):
         """
         Derive all column-geometry constants from the layout file.
         Falls back to the original 64-px baseline values when no layout is present.
+        JSONData uses attribute access, so all reads go through getattr().
         """
         fh = self.font_height
-        lo = self.layout or {}
+        lo = self.layout
 
         # F1 header badge
-        badge       = lo.get("header_badge", {})
-        badge_size  = badge.get("size", [None, None])
-        self.badge_w = (
-            badge_size[0]
-            if badge_size[0] is not None
-            else int(self.font.getlength("F1")) + 4
-        )
+        badge    = getattr(lo, "header_badge", None)
+        badge_sz = getattr(badge, "size", None)
+        self.badge_w = badge_sz[0] if badge_sz is not None else int(self.font.getlength("F1")) + 4
 
         # Title x position
-        title        = lo.get("header_title", {})
-        title_pos    = title.get("position", [None, 0])
-        self.title_x = title_pos[0] if title_pos[0] is not None else self.badge_w + 2
+        title     = getattr(lo, "header_title", None)
+        title_pos = getattr(title, "position", None)
+        self.title_x = title_pos[0] if title_pos is not None else self.badge_w + 2
 
         # Rank column — right-aligned within this width
-        rank_col        = lo.get("rank_col", {})
-        rank_size       = rank_col.get("size", [8, fh])
-        self.pos_width  = rank_size[0]
+        rank_col = getattr(lo, "rank_col", None)
+        rank_sz  = getattr(rank_col, "size", None)
+        self.pos_width = rank_sz[0] if rank_sz is not None else 8
 
         # Coloured code/team badge background
-        code_bg              = lo.get("code_bg", {})
-        code_pos             = code_bg.get("position", [self.pos_width + 1, 0])
-        code_size            = code_bg.get("size", [14, fh])
-        self.code_x          = code_pos[0]
-        self.code_bg_width   = code_size[0]
-        self.code_bg_end     = self.code_x + self.code_bg_width
+        code_bg  = getattr(lo, "code_bg", None)
+        code_pos = getattr(code_bg, "position", None)
+        code_sz  = getattr(code_bg, "size", None)
+        self.code_x        = code_pos[0] if code_pos is not None else self.pos_width + 1
+        self.code_bg_width = code_sz[0]  if code_sz  is not None else 14
+        self.code_bg_end   = self.code_x + self.code_bg_width
 
         # Points column margins
-        self.pts_margin = lo.get("pts_margin", 2)
-        self.pts_gap    = lo.get("pts_gap",    2)
+        self.pts_margin = getattr(lo, "pts_margin", 2)
+        self.pts_gap    = getattr(lo, "pts_gap",    2)
 
     # ------------------------------------------------------------------
     # Render entry point
