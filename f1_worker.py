@@ -3,10 +3,11 @@ F1 worker - fetches driver standings, constructor standings, and the upcoming
 race schedule from the Jolpica F1 API (https://api.jolpi.ca), an
 Ergast-compatible JSON service.
 """
+import json
 import logging
+import urllib.error
+import urllib.request
 from datetime import datetime, timezone
-
-import requests
 
 from utils import sb_cache
 
@@ -57,13 +58,13 @@ def _current_season():
 
 def _get(url):
     try:
-        resp = requests.get(url, headers=_HEADERS, timeout=15)
-        resp.raise_for_status()
-        return resp.json()
-    except requests.RequestException as e:
+        req = urllib.request.Request(url, headers=_HEADERS)
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            return json.loads(resp.read().decode())
+    except urllib.error.URLError as e:
         debug.warning(f"F1 worker: request failed for {url}: {e}")
         return None
-    except ValueError as e:
+    except (json.JSONDecodeError, ValueError) as e:
         debug.warning(f"F1 worker: JSON decode error for {url}: {e}")
         return None
 
